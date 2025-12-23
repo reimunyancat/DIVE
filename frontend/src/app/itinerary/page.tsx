@@ -1,0 +1,292 @@
+'use client'
+
+import { useState } from 'react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { CheckCircle, MapPin } from 'lucide-react'
+import { Sidebar } from '@/components/layout/sidebar'
+import { Map } from '@/components/map'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useItineraryStore, useThemeInputStore, useAuthStore, Place } from '@/lib/store'
+import { api } from '@/lib/api'
+import { cn } from '@/lib/utils'
+
+export default function ItineraryPage() {
+  const router = useRouter()
+  const { theme, region } = useThemeInputStore()
+  const { user } = useAuthStore()
+  const {
+    itinerary,
+    selectedDay,
+    selectedPlace,
+    setSelectedDay,
+    setSelectedPlace,
+  } = useItineraryStore()
+
+  const [showPlaceDetail, setShowPlaceDetail] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const currentDaySchedule = itinerary.find((d) => d.day === selectedDay)
+  const currentPlaces = currentDaySchedule?.places || []
+
+  const handlePlaceClick = (place: Place) => {
+    setSelectedPlace(place)
+  }
+
+  const handlePlaceDoubleClick = (place: Place) => {
+    setSelectedPlace(place)
+    setShowPlaceDetail(true)
+  }
+
+  const handleSaveItinerary = async () => {
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      router.push('/login')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      // 일정 데이터를 백엔드 형식으로 변환
+      const items = itinerary.flatMap((day) =>
+        day.places.map((place, index) => ({
+          place_name: place.name,
+          day: day.day,
+          order: index + 1,
+          lat: place.lat,
+          lng: place.lng,
+          memo: place.description || '',
+        }))
+      )
+
+      const response = await api.saveItinerary({
+        userId: user.id,
+        title: `${region} ${theme} 여행`,
+        theme: theme,
+        items,
+      })
+
+      if (response.success) {
+        alert('일정이 저장되었습니다!')
+      } else {
+        alert('저장에 실패했습니다: ' + response.error)
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      alert('저장 중 오류가 발생했습니다.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (itinerary.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
+        <Sidebar />
+        <div className="text-center">
+          <h2 className="mb-4 text-xl font-semibold text-white">일정이 없습니다</h2>
+          <Button onClick={() => router.push('/search')}>일정 만들기</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-screen bg-[#1a1a1a]">
+      <Sidebar />
+
+      <main className="flex flex-1 pl-16">
+        {/* Left: Map Section */}
+        <div className="relative flex w-[45%] flex-col">
+          {/* Day Label on Map */}
+          <div className="absolute left-4 top-4 z-10 rounded bg-white px-3 py-1">
+            <span className="font-semibold text-black">Day{selectedDay}.</span>
+          </div>
+
+          {/* Map */}
+          <div className="h-[60%]">
+            <Map
+              places={currentPlaces}
+              selectedPlace={selectedPlace}
+              onPlaceSelect={handlePlaceClick}
+            />
+          </div>
+
+          {/* Selected Place Preview */}
+          {selectedPlace && (
+            <div className="flex-1 bg-[#1a1a1a] p-4">
+              <h3 className="mb-1 text-lg font-semibold text-white">{selectedPlace.name}</h3>
+              <p className="mb-4 text-sm text-gray-400">{selectedPlace.address}</p>
+              
+              {/* Images Grid */}
+              <div className="flex gap-2">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-[4/3] w-1/2 overflow-hidden rounded-lg"
+                  >
+                    <Image
+                      src={`https://picsum.photos/400/300?random=${selectedPlace.id}${i}`}
+                      alt={selectedPlace.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Timeline Section */}
+        <div className="flex flex-1 flex-col border-l border-gray-800">
+          {/* Header with Day Tabs */}
+          <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+            <div className="flex gap-8">
+              {itinerary.map((day) => (
+                <button
+                  key={day.day}
+                  onClick={() => setSelectedDay(day.day)}
+                  className={cn(
+                    'text-lg font-semibold transition-colors',
+                    selectedDay === day.day
+                      ? 'text-white'
+                      : 'text-gray-500 hover:text-gray-300'
+                  )}
+                >
+                  Day{day.day}.
+                </button>
+              ))}
+            </div>
+
+            <Button
+              onClick={handleSaveItinerary}
+              size="sm"
+              className="bg-primary px-4"
+              disabled={isSaving}
+            >
+              {isSaving ? '저장 중...' : '일정 저장'}
+            </Button>
+          </div>
+
+          {/* Region Info per Day */}
+          <div className="flex border-b border-gray-800">
+            {itinerary.map((day) => (
+              <div
+                key={day.day}
+                className="flex-1 border-r border-gray-800 px-4 py-2 last:border-r-0"
+              >
+                <p className="text-sm text-gray-400">{region} 탐험</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Places Grid - 3 columns for 3 days */}
+          <div className="flex flex-1 overflow-hidden">
+            {itinerary.map((day) => (
+              <div
+                key={day.day}
+                className="flex-1 overflow-y-auto border-r border-gray-800 p-2 last:border-r-0"
+              >
+                <div className="space-y-2">
+                  {day.places.map((place, index) => (
+                    <motion.div
+                      key={place.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        setSelectedDay(day.day)
+                        handlePlaceClick(place)
+                      }}
+                      onDoubleClick={() => handlePlaceDoubleClick(place)}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-3 rounded-lg bg-[#242424] p-2 transition-all hover:bg-[#2a2a2a]',
+                        selectedPlace?.id === place.id && selectedDay === day.day
+                          ? 'ring-1 ring-primary'
+                          : ''
+                      )}
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded">
+                        <Image
+                          src={place.imageUrl || `https://picsum.photos/100/100?random=${place.id}`}
+                          alt={place.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+
+                      {/* Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <h4 className="truncate text-sm font-medium text-white">
+                            {place.name}
+                          </h4>
+                          {place.verified && (
+                            <CheckCircle className="h-3 w-3 flex-shrink-0 text-blue-400" />
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-gray-500">
+                          {place.address}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* Place Detail Dialog */}
+      <Dialog open={showPlaceDetail} onOpenChange={setShowPlaceDetail}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>장소 상세 정보</DialogTitle>
+          </DialogHeader>
+          {selectedPlace && (
+            <div className="space-y-4">
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                <Image
+                  src={selectedPlace.imageUrl || `https://picsum.photos/400/300?random=${selectedPlace.id}`}
+                  alt={selectedPlace.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold">{selectedPlace.name}</h2>
+                  {selectedPlace.verified && (
+                    <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs text-blue-400">
+                      DIVE 인증
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 flex items-center gap-1 text-gray-400">
+                  <MapPin className="h-4 w-4" />
+                  {selectedPlace.address}
+                </p>
+              </div>
+              {selectedPlace.themeRelevance && (
+                <div className="rounded-lg bg-primary/10 p-4">
+                  <h3 className="mb-2 font-semibold text-primary">테마 부합성</h3>
+                  <p className="text-sm">{selectedPlace.themeRelevance}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

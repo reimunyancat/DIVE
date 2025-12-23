@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 26 26 26;
+    --foreground: 255 255 255;
+    --card: 36 36 36;
+    --card-foreground: 255 255 255;
+    --primary: 59 130 246;
+    --primary-foreground: 255 255 255;
+    --secondary: 30 58 95;
+    --secondary-foreground: 255 255 255;
+    --muted: 42 42 42;
+    --muted-foreground: 160 160 160;
+    --accent: 59 130 246;
+    --accent-foreground: 255 255 255;
+    --border: 51 51 51;
+    --ring: 59 130 246;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Leaflet Map Overrides */
+.leaflet-container {
+  background: #1a1a1a;
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #242424;
+  color: #fff;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+.leaflet-popup-tip {
+  background: #242424;
+}
+
+/* Loading Animation */
+@keyframes loading-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.loading-text {
+  background: linear-gradient(90deg, #ffffff 0%, #3B82F6 50%, #ffffff 100%);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: loading-gradient 2s ease infinite;
+}
