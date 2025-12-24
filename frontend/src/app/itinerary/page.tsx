@@ -104,7 +104,7 @@ export default function ItineraryPage() {
 
       <main className="flex flex-1 pl-16">
         {/* Left: Map Section */}
-        <div className="relative flex w-[45%] flex-col">
+        <div className="relative flex w-[38%] flex-shrink-0 flex-col border-r border-gray-800">
           {/* Day Label on Map */}
           <div className="absolute left-4 top-4 z-10 rounded bg-white px-3 py-1">
             <span className="font-semibold text-black">Day{selectedDay}.</span>
@@ -145,27 +145,10 @@ export default function ItineraryPage() {
           )}
         </div>
 
-        {/* Right: Timeline Section */}
-        <div className="flex flex-1 flex-col border-l border-gray-800">
-          {/* Header with Day Tabs */}
-          <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-            <div className="flex gap-8">
-              {itinerary.map((day) => (
-                <button
-                  key={day.day}
-                  onClick={() => setSelectedDay(day.day)}
-                  className={cn(
-                    'text-lg font-semibold transition-colors',
-                    selectedDay === day.day
-                      ? 'text-white'
-                      : 'text-gray-500 hover:text-gray-300'
-                  )}
-                >
-                  Day{day.day}.
-                </button>
-              ))}
-            </div>
-
+        {/* Right: Day Columns */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-end border-b border-gray-800 px-4 py-3">
             <Button
               onClick={handleSaveItinerary}
               size="sm"
@@ -176,73 +159,72 @@ export default function ItineraryPage() {
             </Button>
           </div>
 
-          {/* Region Info per Day */}
-          <div className="flex border-b border-gray-800">
-            {itinerary.map((day) => (
-              <div
-                key={day.day}
-                className="flex-1 border-r border-gray-800 px-4 py-2 last:border-r-0"
-              >
-                <p className="text-sm text-gray-400">{region} 탐험</p>
-              </div>
-            ))}
-          </div>
+          {/* Scrollable Day Columns */}
+          <div className="flex-1 overflow-x-auto overflow-y-hidden">
+            <div className="flex h-full min-w-max">
+              {itinerary.map((day) => (
+                <div
+                  key={day.day}
+                  className="flex h-full w-[280px] flex-shrink-0 flex-col border-r border-gray-800 last:border-r-0"
+                >
+                  {/* Day Header */}
+                  <div className="border-b border-gray-800 px-4 py-3">
+                    <h2 className="text-lg font-semibold text-white">Day{day.day}.</h2>
+                    <p className="text-xs text-gray-500">{region} 탐험</p>
+                  </div>
 
-          {/* Places Grid - 3 columns for 3 days */}
-          <div className="flex flex-1 overflow-hidden">
-            {itinerary.map((day) => (
-              <div
-                key={day.day}
-                className="flex-1 overflow-y-auto border-r border-gray-800 p-2 last:border-r-0"
-              >
-                <div className="space-y-2">
-                  {day.places.map((place, index) => (
-                    <motion.div
-                      key={place.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => {
-                        setSelectedDay(day.day)
-                        handlePlaceClick(place)
-                      }}
-                      onDoubleClick={() => handlePlaceDoubleClick(place)}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-3 rounded-lg bg-[#242424] p-2 transition-all hover:bg-[#2a2a2a]',
-                        selectedPlace?.id === place.id && selectedDay === day.day
-                          ? 'ring-1 ring-primary'
-                          : ''
-                      )}
-                    >
-                      {/* Thumbnail */}
-                      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded">
-                        <Image
-                          src={place.imageUrl || `https://picsum.photos/100/100?random=${place.id}`}
-                          alt={place.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-
-                      {/* Info */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <h4 className="truncate text-sm font-medium text-white">
-                            {place.name}
-                          </h4>
-                          {place.verified && (
-                            <CheckCircle className="h-3 w-3 flex-shrink-0 text-blue-400" />
+                  {/* Places List */}
+                  <div className="flex-1 overflow-y-auto p-2">
+                    <div className="space-y-2">
+                      {day.places.map((place, index) => (
+                        <motion.div
+                          key={place.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          onClick={() => {
+                            setSelectedDay(day.day)
+                            handlePlaceClick(place)
+                          }}
+                          onDoubleClick={() => handlePlaceDoubleClick(place)}
+                          className={cn(
+                            'flex cursor-pointer items-center gap-2 rounded-lg bg-[#242424] p-2 transition-all hover:bg-[#2a2a2a]',
+                            selectedPlace?.id === place.id && selectedDay === day.day
+                              ? 'ring-1 ring-primary'
+                              : ''
                           )}
-                        </div>
-                        <p className="truncate text-xs text-gray-500">
-                          {place.address}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
+                        >
+                          {/* Thumbnail */}
+                          <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded">
+                            <Image
+                              src={place.imageUrl || `https://picsum.photos/100/100?random=${place.id}`}
+                              alt={place.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1">
+                              <h4 className="truncate text-xs font-medium text-primary">
+                                {place.name}
+                              </h4>
+                              {place.verified && (
+                                <CheckCircle className="h-3 w-3 flex-shrink-0 text-blue-400" />
+                              )}
+                            </div>
+                            <p className="truncate text-xs text-gray-500">
+                              {place.address}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </main>
