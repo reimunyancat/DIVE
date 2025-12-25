@@ -1,58 +1,63 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { CheckCircle, MapPin } from 'lucide-react'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Map } from '@/components/map'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { CheckCircle, MapPin } from "lucide-react";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Map } from "@/components/map";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { useItineraryStore, useThemeInputStore, useAuthStore, Place } from '@/lib/store'
-import { api } from '@/lib/api'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/dialog";
+import {
+  useItineraryStore,
+  useThemeInputStore,
+  useAuthStore,
+  Place,
+} from "@/lib/store";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 export default function ItineraryPage() {
-  const router = useRouter()
-  const { theme, region } = useThemeInputStore()
-  const { user } = useAuthStore()
+  const router = useRouter();
+  const { theme, region } = useThemeInputStore();
+  const { user } = useAuthStore();
   const {
     itinerary,
     selectedDay,
     selectedPlace,
     setSelectedDay,
     setSelectedPlace,
-  } = useItineraryStore()
+  } = useItineraryStore();
 
-  const [showPlaceDetail, setShowPlaceDetail] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [showPlaceDetail, setShowPlaceDetail] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const currentDaySchedule = itinerary.find((d) => d.day === selectedDay)
-  const currentPlaces = currentDaySchedule?.places || []
+  const currentDaySchedule = itinerary.find((d) => d.day === selectedDay);
+  const currentPlaces = currentDaySchedule?.places || [];
 
   const handlePlaceClick = (place: Place) => {
-    setSelectedPlace(place)
-  }
+    setSelectedPlace(place);
+  };
 
   const handlePlaceDoubleClick = (place: Place) => {
-    setSelectedPlace(place)
-    setShowPlaceDetail(true)
-  }
+    setSelectedPlace(place);
+    setShowPlaceDetail(true);
+  };
 
   const handleSaveItinerary = async () => {
     if (!user) {
-      alert('로그인이 필요합니다.')
-      router.push('/login')
-      return
+      alert("로그인이 필요합니다.");
+      router.push("/login");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       // 일정 데이터를 백엔드 형식으로 변환
       const items = itinerary.flatMap((day) =>
@@ -62,56 +67,59 @@ export default function ItineraryPage() {
           order: index + 1,
           lat: place.lat,
           lng: place.lng,
-          memo: place.description || '',
+          memo: place.description || "",
+          address: place.address || "",
         }))
-      )
+      );
 
       const response = await api.saveItinerary({
         userId: user.id,
         title: `${region} ${theme} 여행`,
         theme: theme,
         items,
-      })
+      });
 
       if (response.success) {
-        alert('일정이 저장되었습니다!')
+        alert("일정이 저장되었습니다!");
       } else {
-        alert('저장에 실패했습니다: ' + response.error)
+        alert("저장에 실패했습니다: " + response.error);
       }
     } catch (error) {
-      console.error('Save error:', error)
-      alert('저장 중 오류가 발생했습니다.')
+      console.error("Save error:", error);
+      alert("저장 중 오류가 발생했습니다.");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   if (itinerary.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
         <Sidebar />
         <div className="text-center">
-          <h2 className="mb-4 text-xl font-semibold text-white">일정이 없습니다</h2>
-          <Button onClick={() => router.push('/search')}>일정 만들기</Button>
+          <h2 className="mb-4 text-xl font-semibold text-white">
+            일정이 없습니다
+          </h2>
+          <Button onClick={() => router.push("/search")}>일정 만들기</Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex min-h-screen bg-[#1a1a1a]">
       <Sidebar />
 
-      <main className="flex flex-1 pl-16">
+      <main className="flex flex-1 pl-16 h-screen overflow-hidden">
         {/* Left: Map Section */}
-        <div className="relative flex w-[45%] flex-col">
+        <div className="relative flex w-[60%] flex-col h-full border-r border-gray-800">
           {/* Day Label on Map */}
           <div className="absolute left-4 top-4 z-10 rounded bg-white px-3 py-1">
             <span className="font-semibold text-black">Day{selectedDay}.</span>
           </div>
 
           {/* Map */}
-          <div className="h-[60%]">
+          <div className="flex-1">
             <Map
               places={currentPlaces}
               selectedPlace={selectedPlace}
@@ -121,10 +129,14 @@ export default function ItineraryPage() {
 
           {/* Selected Place Preview */}
           {selectedPlace && (
-            <div className="flex-1 bg-[#1a1a1a] p-4">
-              <h3 className="mb-1 text-lg font-semibold text-white">{selectedPlace.name}</h3>
-              <p className="mb-4 text-sm text-gray-400">{selectedPlace.address}</p>
-              
+            <div className="h-[200px] bg-[#1a1a1a] p-4 border-t border-gray-800">
+              <h3 className="mb-1 text-lg font-semibold text-white">
+                {selectedPlace.name}
+              </h3>
+              <p className="mb-4 text-sm text-gray-400">
+                {selectedPlace.address}
+              </p>
+
               {/* Images Grid */}
               <div className="flex gap-2">
                 {[1, 2].map((i) => (
@@ -155,10 +167,10 @@ export default function ItineraryPage() {
                   key={day.day}
                   onClick={() => setSelectedDay(day.day)}
                   className={cn(
-                    'text-lg font-semibold transition-colors',
+                    "text-lg font-semibold transition-colors",
                     selectedDay === day.day
-                      ? 'text-white'
-                      : 'text-gray-500 hover:text-gray-300'
+                      ? "text-white"
+                      : "text-gray-500 hover:text-gray-300"
                   )}
                 >
                   Day{day.day}.
@@ -172,7 +184,7 @@ export default function ItineraryPage() {
               className="bg-primary px-4"
               disabled={isSaving}
             >
-              {isSaving ? '저장 중...' : '일정 저장'}
+              {isSaving ? "저장 중..." : "일정 저장"}
             </Button>
           </div>
 
@@ -203,21 +215,26 @@ export default function ItineraryPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => {
-                        setSelectedDay(day.day)
-                        handlePlaceClick(place)
+                        // Only update selected place, do NOT change selectedDay automatically
+                        // unless we want to switch the map view to that day
+                        // setSelectedDay(day.day);
+                        handlePlaceClick(place);
                       }}
                       onDoubleClick={() => handlePlaceDoubleClick(place)}
                       className={cn(
-                        'flex cursor-pointer items-center gap-3 rounded-lg bg-[#242424] p-2 transition-all hover:bg-[#2a2a2a]',
-                        selectedPlace?.id === place.id && selectedDay === day.day
-                          ? 'ring-1 ring-primary'
-                          : ''
+                        "flex cursor-pointer items-center gap-3 rounded-lg bg-[#242424] p-2 transition-all hover:bg-[#2a2a2a]",
+                        selectedPlace?.id === place.id
+                          ? "ring-1 ring-primary"
+                          : ""
                       )}
                     >
                       {/* Thumbnail */}
                       <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded">
                         <Image
-                          src={place.imageUrl || `https://picsum.photos/100/100?random=${place.id}`}
+                          src={
+                            place.imageUrl ||
+                            `https://picsum.photos/100/100?random=${place.id}`
+                          }
                           alt={place.name}
                           fill
                           className="object-cover"
@@ -257,7 +274,10 @@ export default function ItineraryPage() {
             <div className="space-y-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-lg">
                 <Image
-                  src={selectedPlace.imageUrl || `https://picsum.photos/400/300?random=${selectedPlace.id}`}
+                  src={
+                    selectedPlace.imageUrl ||
+                    `https://picsum.photos/400/300?random=${selectedPlace.id}`
+                  }
                   alt={selectedPlace.name}
                   fill
                   className="object-cover"
@@ -277,10 +297,12 @@ export default function ItineraryPage() {
                   {selectedPlace.address}
                 </p>
               </div>
-              {selectedPlace.themeRelevance && (
-                <div className="rounded-lg bg-primary/10 p-4">
-                  <h3 className="mb-2 font-semibold text-primary">테마 부합성</h3>
-                  <p className="text-sm">{selectedPlace.themeRelevance}</p>
+              {selectedPlace.description && (
+                <div className="rounded-lg bg-[#2a2a2a] p-4">
+                  <h3 className="mb-2 font-semibold text-white">장소 소개</h3>
+                  <p className="text-sm text-gray-300">
+                    {selectedPlace.description}
+                  </p>
                 </div>
               )}
             </div>
@@ -288,5 +310,5 @@ export default function ItineraryPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

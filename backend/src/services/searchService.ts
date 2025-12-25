@@ -10,22 +10,22 @@ export const searchPlace = async (query: string) => {
     console.warn(
       "Google Search API Key or CX is missing. Skipping real search."
     );
-    return null;
+    return [];
   }
 
   try {
     const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(
       query
-    )}`;
+    )}&num=10`;
     const response = await fetch(url);
     const data = await response.json();
 
     if (data.items && data.items.length > 0) {
-      return data.items[0]; // 가장 첫 번째 검색 결과 반환
+      return data.items;
     }
-    return null;
+    return [];
   } catch (error) {
     console.error("Google Search Error:", error);
-    return null;
+    return [];
   }
 };

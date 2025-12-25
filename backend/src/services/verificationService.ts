@@ -9,24 +9,26 @@ const groq = new Groq({
 });
 
 export const verifyPlace = async (placeName: string) => {
-  const searchResult = await searchPlace(placeName);
+  const searchResults = await searchPlace(placeName);
   let searchContext = "";
 
-  if (searchResult) {
-    searchContext = `
-    [Google 검색 결과]
-    제목: ${searchResult.title}
-    링크: ${searchResult.link}
-    요약: ${searchResult.snippet}
-    `;
+  if (searchResults && searchResults.length > 0) {
+    searchContext = `[Google 검색 결과 (상위 10개)]\n`;
+    searchResults.forEach((item: any, index: number) => {
+      searchContext += `${index + 1}. 제목: ${item.title}\n   요약: ${
+        item.snippet
+      }\n   링크: ${item.link}\n\n`;
+    });
   }
 
   const prompt = `
     장소명: "${placeName}"
+    
     ${searchContext}
     
-    위의 Google 검색 결과(있다면)와 당신의 지식을 종합하여,
-    이 장소가 실제로 존재하는지, 그리고 현재 운영 중인지 확인해주세요.
+    [지시사항]
+    위 검색 결과를 분석하여 해당 장소의 실존 여부와 운영 상태를 검증하세요.
+    
     결과는 다음 JSON 형식으로만 출력해주세요.
     
     {

@@ -7,6 +7,7 @@ export interface ItineraryItem {
   lat?: number;
   lng?: number;
   memo?: string;
+  address?: string;
 }
 
 export const saveItinerary = async (
@@ -57,6 +58,22 @@ export const getItinerary = async (id: string) => {
     )
     .eq("id", id)
     .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const getUserItineraries = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("itineraries")
+    .select(
+      `
+      *,
+      itinerary_items (*)
+    `
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data;

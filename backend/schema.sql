@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- Itineraries (여행 일정 메인)
 CREATE TABLE IF NOT EXISTS public.itineraries (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id),
@@ -16,7 +15,6 @@ CREATE TABLE IF NOT EXISTS public.itineraries (
   is_public BOOLEAN DEFAULT true
 );
 
--- Itinerary Items (일정 상세 장소들)
 CREATE TABLE IF NOT EXISTS public.itinerary_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   itinerary_id UUID REFERENCES public.itineraries(id) ON DELETE CASCADE,
@@ -26,16 +24,22 @@ CREATE TABLE IF NOT EXISTS public.itinerary_items (
   lat DOUBLE PRECISION,
   lng DOUBLE PRECISION,
   memo TEXT,
+  address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- Places (장소 정보 캐싱용)
-CREATE TABLE IF NOT EXISTS public.places (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  address TEXT,
-  verification_score INTEGER,
-  tags TEXT[],
-  embedding vector(1536)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.itineraries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.itinerary_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public itineraries are viewable by everyone" ON public.itineraries FOR SELECT USING (true);
+CREATE POLICY "Public itinerary items are viewable by everyone" ON public.itinerary_items FOR SELECT USING (true);
+
+CREATE POLICY "Enable insert for users and service_role" ON public.itineraries FOR INSERT WITH CHECK (
+  auth.uid() = user_id OR (select auth.jwt() ->> 'role') = 'service_role'
+);
+
+CREATE POLICY "Enable insert items for users and service_role" ON public.itinerary_items FOR INSERT WITH CHECK (
+  exists ( select 1 from public.itineraries where id = itinerary_id and user_id = auth.uid() )
+  OR (select auth.jwt() ->> 'role') = 'service_role'
 );
