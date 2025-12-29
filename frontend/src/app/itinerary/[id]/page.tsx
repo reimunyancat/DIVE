@@ -16,7 +16,8 @@ import {
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Map } from "@/components/map";
-import { Place as StorePlace } from "@/lib/store";
+import { Place as StorePlace, useAuthStore } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 
 interface Place extends StorePlace {
   day: number;
@@ -37,10 +38,13 @@ export default function ItineraryDetailPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [itinerary, setItinerary] = useState<ItineraryDetail | null>(null);
   const [selectedDay, setSelectedDay] = useState(1);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [showPlaceDetail, setShowPlaceDetail] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -69,6 +73,7 @@ export default function ItineraryDetailPage({
             items: items,
             created_at: data.created_at,
           });
+          setIsPublic(data.is_public || false);
         }
       } catch (error) {
         console.error("Failed to fetch itinerary:", error);
@@ -77,6 +82,30 @@ export default function ItineraryDetailPage({
 
     fetchItinerary();
   }, [params.id]);
+
+  // 공유 토글
+  const handleShare = async () => {
+    try {
+      const newPublicState = !isPublic;
+      const { error } = await supabase
+        .from('itineraries')
+        .update({ is_public: newPublicState })
+        .eq('id', params.id);
+
+      if (error) throw error;
+
+      setIsPublic(newPublicState);
+      if (newPublicState) {
+        alert('일정이 커뮤니티에 공유되었습니다!');
+      } else {
+        alert('일정이 비공개로 전환되었습니다.');
+      }
+      setShowShareModal(false);
+    } catch (error) {
+      console.error('Share error:', error);
+      alert('공유에 실패했습니다.');
+    }
+  };
 
   if (!itinerary) {
     return (
@@ -128,8 +157,18 @@ export default function ItineraryDetailPage({
                   <span className="rounded-full bg-[#333] px-3 py-1 text-xs text-gray-400">
                     {days.length}일 코스
                   </span>
+                  {isPublic && (
+                    <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs text-green-400">
+                      공개됨
+                    </span>
+                  )}
                 </div>
-                <Button variant="ghost" size="icon">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowShareModal(true)}
+                  className={isPublic ? "text-green-400" : "text-gray-400"}
+                >
                   <Share2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -231,6 +270,44 @@ export default function ItineraryDetailPage({
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Modal */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md bg-[#1a1a1a] text-white border-[#333]">
+          <DialogHeader>
+            <DialogTitle>
+              {isPublic ? '일정 공유 해제' : '커뮤니티에 공유'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-gray-400">
+              {isPublic 
+                ? '이 일정을 비공개로 전환하시겠습니까?'
+                : '이 여행 일정을 커뮤니티에 공유하시겠습니까?\n다른 사람들이 내 일정을 참고할 수 있어요.'
+              }
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowShareModal(false)}
+              >
+                취소
+              </Button>
+              <Button
+                className={cn(
+                  "flex-1 gap-2",
+                  isPublic ? "bg-red-500 hover:bg-red-600" : ""
+                )}
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+                {isPublic ? '비공개로 전환' : '공유하기'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

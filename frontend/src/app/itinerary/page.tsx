@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { CheckCircle, MapPin } from 'lucide-react'
+import { CheckCircle, MapPin, Share2 } from 'lucide-react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Map } from '@/components/map'
 import { Button } from '@/components/ui/button'
@@ -17,10 +17,11 @@ import {
 import { useItineraryStore, useThemeInputStore, useAuthStore, Place } from '@/lib/store'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 export default function ItineraryPage() {
   const router = useRouter()
-  const { theme, region } = useThemeInputStore()
+  const { theme, region, duration } = useThemeInputStore()
   const { user } = useAuthStore()
   const {
     itinerary,
@@ -31,7 +32,9 @@ export default function ItineraryPage() {
   } = useItineraryStore()
 
   const [showPlaceDetail, setShowPlaceDetail] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [savedItineraryId, setSavedItineraryId] = useState<string | null>(null)
 
   const currentDaySchedule = itinerary.find((d) => d.day === selectedDay)
   const currentPlaces = currentDaySchedule?.places || []
@@ -73,8 +76,9 @@ export default function ItineraryPage() {
         items,
       })
 
-      if (response.success) {
-        alert('일정이 저장되었습니다!')
+      if (response.success && response.data) {
+        setSavedItineraryId((response.data as any).id)
+        setShowShareModal(true)
       } else {
         alert('저장에 실패했습니다: ' + response.error)
       }
@@ -83,6 +87,31 @@ export default function ItineraryPage() {
       alert('저장 중 오류가 발생했습니다.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  // 커뮤니티에 공유하기
+  const handleShare = async () => {
+    if (!savedItineraryId) return
+
+    try {
+      const { error } = await supabase
+        .from('itineraries')
+        .update({ 
+          is_public: true,
+          region: region,
+          duration: duration,
+        })
+        .eq('id', savedItineraryId)
+
+      if (error) throw error
+
+      alert('일정이 커뮤니티에 공유되었습니다!')
+      setShowShareModal(false)
+      router.push('/community')
+    } catch (error) {
+      console.error('Share error:', error)
+      alert('공유에 실패했습니다.')
     }
   }
 
@@ -267,6 +296,37 @@ export default function ItineraryPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Modal */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>일정이 저장되었습니다! 🎉</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-gray-400">
+              이 여행 일정을 커뮤니티에 공유하시겠습니까?<br />
+              다른 사람들이 내 일정을 참고할 수 있어요.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowShareModal(false)}
+              >
+                나중에
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+                공유하기
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
